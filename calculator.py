@@ -28,11 +28,28 @@ def main():
     ops_symbols = [op['op'] for op in ops]
     parsed = parse(expression, ops_symbols)  # [2,'+',2,'*',2]
 
+    print(parsed)
     evaluate(parsed, ops)
     print(parsed)
 
 
 def evaluate(parsed_exp, ops):
+    print("parsed_exp: ", parsed_exp)
+
+    while '(' in parsed_exp:
+        if ')' not in parsed_exp:
+            print("Invalid: missing ')'")
+            exit()
+        fst_open = parsed_exp.index('(')
+        lst_open = len(parsed_exp) - parsed_exp[::-1].index(')') - 1
+        i, j = fst_open, lst_open
+        sub_exp = parsed_exp[i + 1:j]
+        evaluate(sub_exp, ops)
+        print("sub_exp: ", sub_exp)
+        parsed_exp[i] = sub_exp[0]
+        parsed_exp.pop(i + 1)
+        parsed_exp.pop(i + 1)
+
     min_p = min([op['p'] for op in ops])
     max_p = max([op['p'] for op in ops])
 
@@ -40,10 +57,10 @@ def evaluate(parsed_exp, ops):
     for p in range(min_p, max_p + 1):
         p_ops = [op for op in ops if op['p'] == p]
         p_ops_symbols = [op['op'] for op in p_ops]
-        for x in parsed_exp:
+        for i in range(len(parsed_exp)):
+            x = parsed_exp[i]
             if x in p_ops_symbols:
                 op = [op for op in p_ops if op['op'] == x][0]
-                i = parsed_exp.index(x)
                 f_val = op['f'](parsed_exp[i - 1], parsed_exp[i + 1])
                 if op['ltr']:
                     parsed_exp[i - 1] = f_val
@@ -53,20 +70,26 @@ def evaluate(parsed_exp, ops):
                 parsed_exp.pop(i)
                 print(parsed_exp)
 
+    print("result: ", parsed_exp)
+
 
 def parse(expression, ops_symbols):
     """Parses an expression into a list of numbers and operators"""
     expression = expression.replace(" ", "").strip().replace("\t", "").lower()
     res = []
+
+    def is_sep(c):
+        return c in ops_symbols or c in ['(', ')']
+
     # seperate digits from symbols
     for i in range(len(expression)):
         if i == 0:
             res.append(expression[i])
         else:
-            if expression[i] in ops_symbols:
+            if is_sep(expression[i]):
                 res.append(expression[i])
             else:
-                if expression[i - 1] in ops_symbols:
+                if is_sep(expression[i - 1]):
                     res.append(expression[i])
                 else:
                     res[-1] += expression[i]
@@ -75,10 +98,12 @@ def parse(expression, ops_symbols):
         try:
             res[i] = float(res[i])
         except ValueError:
-            if res[i] not in ops_symbols:
-                print("Invalid operator: " + res[i])
-                exit()
-            pass
+            if res[i] in ops_symbols:
+                continue
+            if res[i] in ['(', ')']:
+                continue
+            print(f"Invalid: \"{res[i]}\"")
+            exit()
     return res
 
 
